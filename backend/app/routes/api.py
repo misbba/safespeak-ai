@@ -218,12 +218,11 @@ def extract_screenshot_text():
     Extract text from uploaded screenshot and return for user review.
     """
     try:
-        if "file" not in request.files:
-            return jsonify({"error": "No image file provided in request."}), 400
+        file = request.files.get("image") or request.files.get("file")
+        if not file or not file.filename:
+            return jsonify({"error": "Please upload a screenshot image."}), 400
 
-        file = request.files["file"]
         preset_hint = request.form.get("preset_hint")
-
         extracted_info = OCRService.process_image(file, preset_hint=preset_hint)
         return jsonify(extracted_info), 200
 
@@ -237,26 +236,34 @@ def extract_screenshot_text():
 def analyze_screenshot():
     """
     Step 2 of Screenshot Scanner:
-    Analyzes the reviewed/edited extracted text from a screenshot.
+    Analyzes the reviewed/edited extracted text from a screenshot or directly analyzes an uploaded image.
     """
     try:
+        file = request.files.get("image") or request.files.get("file")
+        preset_hint = request.form.get("preset_hint") if not request.is_json else None
+        
         if request.is_json:
             data = request.get_json() or {}
             extracted_text = sanitize_text(data.get("extracted_text", ""))
             filename = data.get("filename", "screenshot.png")
             is_demo = bool(data.get("is_demo", False))
-        else:
-            if "file" not in request.files:
-                return jsonify({"error": "No file or extracted_text provided."}), 400
-            file = request.files["file"]
-            preset_hint = request.form.get("preset_hint")
-            is_demo = request.form.get("is_demo", "false").lower() == "true"
-            extracted_info = OCRService.process_image(file, preset_hint=preset_hint)
-            extracted_text = extracted_info["extracted_text"]
+        elif file and file.filename:
             filename = file.filename
+            is_demo = request.form.get("is_demo", "false").lower() == "true"
+            # If user already edited/reviewed text in frontend, respect it; otherwise run OCR
+            form_text = request.form.get("extracted_text")
+            if form_text and form_text.strip():
+                extracted_text = sanitize_text(form_text)
+            else:
+                extracted_info = OCRService.process_image(file, preset_hint=preset_hint)
+                extracted_text = extracted_info.get("extracted_text", "")
+        else:
+            return jsonify({"error": "Please upload a screenshot image."}), 400
 
-        if not extracted_text:
-            return jsonify({"error": "No text detected or extracted text is empty."}), 400
+        if not extracted_text or not extracted_text.strip():
+            return jsonify({
+                "error": "SafeSpeak could not read text from this screenshot. Try a clearer screenshot with readable text."
+            }), 400
 
         ai_service = AIAnalysisService(
             api_key=current_app.config.get("AI_API_KEY"),
@@ -293,6 +300,8 @@ def analyze_screenshot():
 
         return jsonify(analysis), 200
 
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
     except Exception as e:
         return jsonify({"error": f"Screenshot analysis failed: {str(e)}"}), 500
 

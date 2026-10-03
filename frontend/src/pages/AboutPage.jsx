@@ -128,10 +128,10 @@ export default function AboutPage({ setCurrentRoute }) {
           <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
             <div className="flex items-center space-x-2 font-bold text-white">
               <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Zero Retention of Credentials</span>
+              <span>Local Privacy-First Processing</span>
             </div>
             <p className="text-slate-400 leading-relaxed">
-              SafeSpeak AI never stores passwords, banking OTPs, PINs, or confidential identity documents. All analysis occurs in ephemeral memory or sanitized local logs.
+              SafeSpeak processes scan information locally where possible. Passwords, banking OTPs, and PINs are never requested or stored. Users should review all information before exporting or sharing it.
             </p>
           </div>
 

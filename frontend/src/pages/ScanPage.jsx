@@ -405,7 +405,7 @@ export default function ScanPage({
           <div className="flex items-center space-x-2.5 px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400 shadow-sm">
             <Lock className="w-4 h-4 text-cyan-400 shrink-0" />
             <span className="leading-snug">
-              <strong className="text-slate-200">Privacy Notice:</strong> Do not enter passwords, live OTPs, PINs or other sensitive credentials.
+              <strong className="text-slate-200">Privacy Notice:</strong> SafeSpeak processes scan information locally where possible. Review information before exporting or sharing it. Do not enter passwords, live OTPs, PINs or other sensitive credentials.
             </span>
           </div>
 

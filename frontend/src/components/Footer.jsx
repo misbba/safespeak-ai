@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, PhoneCall, ExternalLink, Lock, AlertCircle, Heart } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 export default function Footer({ setCurrentRoute }) {
   const handleNavClick = (route, sectionId = null) => {
@@ -7,7 +7,9 @@ export default function Footer({ setCurrentRoute }) {
       setCurrentRoute('landing');
       setTimeout(() => {
         const el = document.getElementById(sectionId);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
       }, 100);
     } else {
       setCurrentRoute(route);
@@ -16,76 +18,81 @@ export default function Footer({ setCurrentRoute }) {
   };
 
   return (
-    <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/95 text-slate-400 text-xs py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
-          {/* Brand & Mission */}
-          <div className="space-y-3">
+    <footer className="w-full mt-auto border-t border-slate-800/80 bg-slate-950 text-slate-400 overflow-hidden">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-14 box-border">
+        {/* Main 4-Section Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-10">
+          
+          {/* 1. LEFT BRAND SECTION (Slightly wider) */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-4 space-y-3.5 pr-0 lg:pr-6">
             <div 
               onClick={() => handleNavClick('landing')}
-              className="flex items-center space-x-2 cursor-pointer group"
+              className="flex items-center space-x-2.5 cursor-pointer group w-fit"
             >
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 font-bold">
-                S
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 group-hover:border-cyan-400/60 transition-colors">
+                <ShieldAlert className="w-4 h-4 text-cyan-400" />
               </div>
-              <span className="text-base font-bold text-white tracking-wide group-hover:text-cyan-300 transition-colors">
-                SafeSpeak AI
+              <span className="text-base font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
+                SafeSpeak <span className="text-cyan-400">AI</span>
               </span>
             </div>
-            <p className="text-cyan-300 font-mono text-xs font-semibold">
+
+            <p className="text-cyan-400/90 text-xs font-semibold tracking-wide">
               &ldquo;Think Before You Click.&rdquo;
             </p>
-            <p className="text-slate-400 leading-relaxed text-xs">
-              AI-powered digital safety assistant helping ordinary users identify suspicious messages, phishing attempts, and scam tactics before taking action.
+
+            <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+              AI-powered digital safety assistant for safer online decisions.
             </p>
-            <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-[11px] text-cyan-300">
-              <Lock className="w-3 h-3 text-cyan-400" />
-              <span>Zero-Retention Privacy</span>
-            </div>
           </div>
 
-          {/* Group 1: Website */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Website
-            </h4>
-            <ul className="space-y-2 text-xs">
+          {/* 2. PRODUCT */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-3 space-y-3.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+              PRODUCT
+            </h3>
+            <ul className="space-y-2.5">
               <li>
-                <button 
-                  onClick={() => handleNavClick('landing')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('landing')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   Home
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('landing', 'features')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('landing', 'features')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   Features
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('landing', 'how-it-works')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('landing', 'how-it-works')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   How It Works
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('about')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('about')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   About
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('safety-center')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('safety-center')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   Safety Center
                 </button>
@@ -93,99 +100,105 @@ export default function Footer({ setCurrentRoute }) {
             </ul>
           </div>
 
-          {/* Group 2: Tools (Layer B Application) */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Tools
-            </h4>
-            <ul className="space-y-2 text-xs">
+          {/* 3. TOOLS */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-2 space-y-3.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+              TOOLS
+            </h3>
+            <ul className="space-y-2.5">
               <li>
-                <button 
-                  onClick={() => handleNavClick('scan-message')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('scan-message')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   Message Scanner
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('url-checker')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('url-checker')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   URL Checker
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('screenshot-scanner')} 
-                  className="hover:text-cyan-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('screenshot-scanner')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   Screenshot Scanner
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => handleNavClick('scan')} 
-                  className="hover:text-cyan-400 font-semibold text-cyan-300 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('scan')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
-                  All Scanners (Scan Hub) &rarr;
+                  Scan Hub
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Group 3: Safety & Emergency Portals */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Safety &amp; Assistance
-            </h4>
-            <ul className="space-y-2 text-xs">
+          {/* 4. SAFETY */}
+          <div className="col-span-1 md:col-span-1 lg:col-span-3 space-y-3.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+              SAFETY
+            </h3>
+            <ul className="space-y-2.5">
               <li>
-                <button 
-                  onClick={() => handleNavClick('report-cybercrime')} 
-                  className="hover:text-rose-300 text-rose-400/90 font-medium transition-colors"
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('report-cybercrime')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
+                >
+                  Report Incident
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('safety-center')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
+                >
+                  Cyber Safety Tips
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('about')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
+                >
+                  Privacy
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('report-cybercrime')}
+                  className="text-slate-400 hover:text-cyan-300 transition-colors duration-150 text-left text-xs"
                 >
                   Report Cybercrime
                 </button>
               </li>
-              <li>
-                <button 
-                  onClick={() => handleNavClick('about')} 
-                  className="hover:text-cyan-400 transition-colors"
-                >
-                  Privacy Commitment
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavClick('safety-center')} 
-                  className="hover:text-cyan-400 transition-colors"
-                >
-                  Safety Guidelines &amp; Red Flags
-                </button>
-              </li>
-              <li className="pt-2">
-                <a 
-                  href="https://cybercrime.gov.in" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="inline-flex items-center space-x-1 text-slate-400 hover:text-cyan-300 transition-colors"
-                >
-                  <span>National Cyber Crime Portal (1930)</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
             </ul>
           </div>
+
         </div>
 
-        {/* Responsible AI Disclaimer & Legal Notice */}
-        <div className="pt-8 border-t border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>
-            &copy; {new Date().getFullYear()} SafeSpeak AI. Built for Digital Safety &amp; Cybersecurity Hackathon. MIT Licensed.
+        {/* BOTTOM ROW WITH THIN DIVIDER */}
+        <div className="pt-8 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <p className="text-slate-500 font-normal">
+            &copy; 2026 SafeSpeak AI
           </p>
-          <p className="text-center md:text-right text-slate-400">
-            Advisory risk scores are AI-assisted evaluations based on heuristic patterns. Never share passwords or live OTPs.
+          <p className="text-slate-500 font-normal text-center sm:text-right">
+            Built for Digital Safety &amp; Cybersecurity
           </p>
         </div>
       </div>

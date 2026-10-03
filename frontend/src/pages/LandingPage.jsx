@@ -60,9 +60,9 @@ export default function LandingPage({ setCurrentRoute, onLaunchDemo }) {
     },
     {
       title: "Privacy First",
-      desc: "Built with a zero-credential retention guarantee. Users should never submit passwords, live OTPs, or banking PINs.",
+      desc: "SafeSpeak processes scan information locally where possible. Review information before exporting or sharing it, and never enter passwords, live OTPs, or PINs.",
       icon: Lock,
-      badge: "Zero-Retention",
+      badge: "Local & Private",
       color: "text-emerald-400 border-emerald-500/30 bg-emerald-950/20"
     },
     {
@@ -147,7 +147,7 @@ export default function LandingPage({ setCurrentRoute, onLaunchDemo }) {
               <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-400">
                 <div className="flex items-center space-x-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Zero-Retention Privacy</span>
+                  <span>Local Privacy-First Processing</span>
                 </div>
                 <div className="flex items-center space-x-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />

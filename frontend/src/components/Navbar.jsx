@@ -6,6 +6,7 @@ import {
 
 export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setIsDemoMode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showDemoInfo, setShowDemoInfo] = useState(false);
 
   // Layer A Public Product Website Navigation Links
   const publicNavLinks = [
@@ -32,6 +33,13 @@ export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setI
     } else {
       setCurrentRoute(item.id);
     }
+  };
+
+  const handleToggleDemo = () => {
+    const nextState = !isDemoMode;
+    setIsDemoMode(nextState);
+    setShowDemoInfo(true);
+    setTimeout(() => setShowDemoInfo(false), 3500);
   };
 
   return (
@@ -63,8 +71,8 @@ export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setI
             </div>
           </div>
 
-          {/* Desktop Public Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-6">
+          {/* Desktop Public Navigation Links (Section 7) */}
+          <nav className="hidden md:flex items-center space-x-5 lg:space-x-6">
             {publicNavLinks.map((item) => {
               const isActive = currentRoute === item.id;
               return (
@@ -79,35 +87,50 @@ export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setI
                 </button>
               );
             })}
-          </nav>
 
-          {/* Right Action: Demo Toggle & Primary Scan Now CTA */}
-          <div className="flex items-center space-x-3">
-            {/* Demo Mode Toggle Button */}
-            <button
-              onClick={() => setIsDemoMode(!isDemoMode)}
-              title="Toggle simulated demo analysis vs live scanner"
-              className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                isDemoMode
-                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${isDemoMode ? 'text-amber-400' : 'text-slate-500'}`} />
-              <span>Demo:</span>
-              <span className={isDemoMode ? 'text-amber-300 font-bold' : 'text-slate-400 font-medium'}>
-                {isDemoMode ? 'ON' : 'OFF'}
-              </span>
-            </button>
-
-            {/* Quick Report Cybercrime Link (Desktop) */}
+            {/* Report Incident in Main Nav */}
             <button
               onClick={() => setCurrentRoute('report-cybercrime')}
-              className="hidden lg:flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-300/90 hover:text-rose-200 bg-rose-950/30 hover:bg-rose-950/60 border border-rose-500/30 transition-all"
+              className={`text-sm font-medium transition-colors hover:text-rose-300 flex items-center space-x-1 ${
+                currentRoute === 'report-cybercrime' ? 'text-rose-400 font-semibold' : 'text-slate-300'
+              }`}
             >
-              <FileText className="w-3.5 h-3.5 text-rose-400" />
               <span>Report Incident</span>
             </button>
+          </nav>
+
+          {/* Right Action: Demo Mode Pill & Primary Scan Now CTA */}
+          <div className="flex items-center space-x-3 relative">
+            {/* Demo Mode Button (Section 8: "Demo Mode") */}
+            <div className="relative">
+              <button
+                onClick={handleToggleDemo}
+                title="Demo Mode: evaluate realistic scam samples without entering personal credentials"
+                className={`hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  isDemoMode
+                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${isDemoMode ? 'text-amber-400' : 'text-slate-500'}`} />
+                <span>Demo Mode</span>
+                <span className={`w-2 h-2 rounded-full ${isDemoMode ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+              </button>
+
+              {/* Informational Toast when clicking Demo Mode */}
+              {showDemoInfo && (
+                <div className="absolute right-0 top-10 w-64 p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[11px] shadow-2xl z-50 animate-in fade-in">
+                  <p className="font-semibold text-amber-300">
+                    {isDemoMode ? "Demo Mode Active" : "Live Mode Active"}
+                  </p>
+                  <p className="text-slate-400 mt-0.5 leading-snug">
+                    {isDemoMode
+                      ? "Pre-loaded scam scenarios can be evaluated without submitting real personal information."
+                      : "Live scanner analyzing custom text and URLs directly via the SafeSpeak engine."}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Layer B Entrypoint: Primary Scan Now Button */}
             <button
@@ -152,23 +175,23 @@ export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setI
             >
               <span className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-rose-400" />
-                <span>Report Cybercrime</span>
+                <span>Report Incident</span>
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-rose-400" />
             </button>
           </div>
 
           <div className="pt-2 border-t border-slate-900 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Simulation Demo Mode:</span>
+            <span className="text-xs text-slate-400">Demo Mode:</span>
             <button
-              onClick={() => setIsDemoMode(!isDemoMode)}
+              onClick={handleToggleDemo}
               className={`px-3 py-1 rounded text-xs font-bold border ${
                 isDemoMode
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : 'bg-slate-900 text-slate-400 border-slate-800'
               }`}
             >
-              {isDemoMode ? 'ON' : 'OFF'}
+              {isDemoMode ? 'Active' : 'Inactive'}
             </button>
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, ShieldAlert, AlertTriangle, CheckCircle2, Copy, Download, 
   ExternalLink, PhoneCall, ArrowLeft, ArrowRight, Printer, RefreshCw, 
-  Clock, CreditCard, Send, Lock, HelpCircle, ChevronRight, Check
+  Clock, CreditCard, Send, Lock, HelpCircle, ChevronRight, Check, X
 } from 'lucide-react';
 import { api } from '../services/api';
 import { generateLocalDraft, OFFICIAL_PORTAL_URL, FINANCIAL_FRAUD_HELPLINE, COMPLAINT_CATEGORIES } from '../services/complaintGenerator';
@@ -51,25 +51,32 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
   const [draftResult, setDraftResult] = useState(null);
   const [editableDraft, setEditableDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generateSuccess, setGenerateSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
   const [validationError, setValidationError] = useState(null);
+
+  // 1930 Helpline Modal State (for Desktop)
+  const [showHelplineModal, setShowHelplineModal] = useState(false);
+  const [copiedHelpline, setCopiedHelpline] = useState(false);
 
   // Pre-fill from initialScanResult if provided
   useEffect(() => {
     if (initialScanResult) {
       // Determine probable category
-      const text = initialScanResult.input_content || '';
+      const text = initialScanResult.input_content || initialScanResult.extracted_text || '';
       const signals = initialScanResult.signals || initialScanResult.warning_signals || [];
       const signalIds = signals.map(s => s.signal_id);
 
       if (signalIds.includes('JOB_OR_INTERNSHIP_FEE')) {
         setCategory('Fake job or internship offers');
-      } else if (signalIds.includes('ACCOUNT_SUSPENSION') || signalIds.includes('OTP_REQUEST')) {
+      } else if (signalIds.includes('ACCOUNT_SUSPENSION') || signalIds.includes('OTP_REQUEST') || signalIds.includes('CREDENTIAL_REQUEST')) {
         setCategory('Phishing or fake bank messages');
       } else if (signalIds.includes('PAYMENT_REQUEST')) {
         setCategory('UPI or payment fraud');
-      } else if (initialScanResult.content_type === 'url') {
+      } else if (initialScanResult.content_type === 'url' || signalIds.includes('SUSPICIOUS_URL')) {
         setCategory('Suspicious website or link');
+      } else if (signalIds.includes('REWARD_OR_PRIZE')) {
+        setCategory('Online financial fraud');
       }
 
       if (initialScanResult.content_type === 'url') {
@@ -77,13 +84,14 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         setSuspectIdentifier(text);
       } else {
         setPlatform('SMS / WhatsApp');
-        // Extract URL or phone if present
         const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+        const phoneMatch = text.match(/(\+?\d{1,4}[-.\s]?)?\(?\d{3,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/);
         if (urlMatch) setSuspectIdentifier(urlMatch[0]);
+        else if (phoneMatch) setSuspectIdentifier(phoneMatch[0]);
       }
 
-      // Build structured initial description
-      let desc = `Suspicious communication received. Automated SafeSpeak AI assessment flagged as ${initialScanResult.risk_level} RISK (Score: ${initialScanResult.risk_score}/100).\n\nContent received:\n"${text}"`;
+      // Build structured initial description from actual scan data
+      let desc = `Suspicious communication received. SafeSpeak AI automated evaluation flagged content as ${initialScanResult.risk_level || 'HIGH'} RISK (Risk Score: ${initialScanResult.risk_score || 'N/A'}/100).\n\nOriginal content received:\n"${text}"`;
       if (initialScanResult.explanation) {
         desc += `\n\nIdentified threat pattern: ${initialScanResult.explanation}`;
       }
@@ -92,13 +100,44 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
       // Pre-add scan findings to evidence
       setEvidenceItems(prev => [
         ...prev,
-        `SafeSpeak AI Threat Telemetry Report (Scan ID: ${initialScanResult.scan_id || 'N/A'}, Risk Score: ${initialScanResult.risk_score}/100)`
+        `SafeSpeak AI Threat Telemetry Report (Scan ID: ${initialScanResult.scan_id || 'N/A'}, Risk Score: ${initialScanResult.risk_score || 'N/A'}/100)`
       ]);
 
       // Jump straight to Step 2 if coming from a scan
       setStep(2);
     }
   }, [initialScanResult]);
+
+  // Robust Cross-Device Call 1930 Handler
+  const handleCall1930 = () => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     (window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+
+    if (isMobile) {
+      window.location.href = `tel:${FINANCIAL_FRAUD_HELPLINE}`;
+    } else {
+      setShowHelplineModal(true);
+    }
+  };
+
+  const handleCopy1930 = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText('1930');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = '1930';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedHelpline(true);
+      setTimeout(() => setCopiedHelpline(false), 2500);
+    } catch (err) {
+      console.error("Failed to copy 1930:", err);
+    }
+  };
 
   const handleToggleEvidence = (itemText) => {
     if (evidenceItems.includes(itemText)) {
@@ -108,20 +147,39 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
     }
   };
 
-  const handleGenerateDraft = async () => {
+  // Step 2 Validation when advancing to Step 3
+  const handleProceedToEvidence = () => {
     setValidationError(null);
 
     if (!description.trim() || description.trim().length < 10) {
-      setValidationError("Please provide an incident description of at least 10 characters.");
+      setValidationError("Please describe what occurred in the incident statement (at least 10 characters).");
       return;
     }
 
     if (moneyLost && (!amount || isNaN(Number(amount)) || Number(amount) <= 0)) {
-      setValidationError("Please enter a valid monetary loss amount.");
+      setValidationError("Please enter a valid positive monetary loss amount.");
+      return;
+    }
+
+    setStep(3);
+  };
+
+  // Step 3 -> Generate Formal Complaint Draft
+  const handleGenerateDraft = async () => {
+    setValidationError(null);
+
+    if (!description.trim() || description.trim().length < 10) {
+      setValidationError("Please complete the incident description (at least 10 characters). Click 'Back to Details' to enter it.");
+      return;
+    }
+
+    if (moneyLost && (!amount || isNaN(Number(amount)) || Number(amount) <= 0)) {
+      setValidationError("Please provide a valid monetary loss amount. Click 'Back to Details' to enter it.");
       return;
     }
 
     setIsGenerating(true);
+    setGenerateSuccess(false);
 
     const payload = {
       category,
@@ -140,7 +198,8 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         risk_score: initialScanResult.risk_score,
         confidence: initialScanResult.confidence,
         signals: initialScanResult.signals || initialScanResult.warning_signals,
-        explanation: initialScanResult.explanation
+        explanation: initialScanResult.explanation,
+        scan_id: initialScanResult.scan_id
       } : null
     };
 
@@ -148,37 +207,68 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
       const res = await api.generateComplaintDraft(payload);
       setDraftResult(res);
       setEditableDraft(res.draft_text);
-      setStep(4);
+      setGenerateSuccess(true);
+      setTimeout(() => {
+        setStep(4);
+        setGenerateSuccess(false);
+      }, 500);
     } catch (err) {
-      console.warn("API draft failed, using local generator:", err);
+      console.warn("Backend API draft generation failed, using local generator:", err);
       const localRes = generateLocalDraft(payload);
       setDraftResult(localRes);
       setEditableDraft(localRes.draft_text);
-      setStep(4);
+      setGenerateSuccess(true);
+      setTimeout(() => {
+        setStep(4);
+        setGenerateSuccess(false);
+      }, 500);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCopyDraft = () => {
-    navigator.clipboard.writeText(editableDraft);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const handleCopyDraft = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(editableDraft);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = editableDraft;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
   };
 
   const handleDownloadTxt = () => {
     const element = document.createElement("a");
     const file = new Blob([editableDraft], { type: "text/plain;charset=utf-8" });
     element.href = URL.createObjectURL(file);
-    element.download = `SafeSpeak_Cybercrime_Complaint_${Date.now()}.txt`;
+    element.download = "safespeak-cybercrime-complaint.txt";
     document.body.appendChild(element);
     element.click();
-    document.body.removeChild(element);
+    setTimeout(() => {
+      document.body.removeChild(element);
+      URL.revokeObjectURL(element.href);
+    }, 100);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleOpenPortal = () => {
+    window.open(OFFICIAL_PORTAL_URL, '_blank', 'noopener,noreferrer');
   };
+
+  const handleEditDetails = () => {
+    setStep(2);
+  };
+
+  // Extract signals to display in draft panel
+  const detectedSignalsList = initialScanResult?.signals || initialScanResult?.warning_signals || [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -196,30 +286,127 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         </p>
       </div>
 
-      {/* Emergency Helpline Banner */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-rose-950/40 via-slate-900 to-amber-950/30 border border-rose-500/40 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* ======================================================== */}
+      {/* SECTION 6: EMERGENCY BANNER                              */}
+      {/* ======================================================== */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-rose-950/60 via-slate-900 to-amber-950/40 border border-rose-500/40 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start space-x-3">
           <div className="p-2 rounded-lg bg-rose-500/20 text-rose-400 shrink-0 mt-0.5">
-            <PhoneCall className="w-5 h-5 animate-pulse" />
+            <PhoneCall className="w-4 h-4 animate-pulse" />
           </div>
           <div className="space-y-0.5">
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Financial Cyber Fraud Emergency</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-900/80 text-rose-200 border border-rose-700/60 font-mono">India 24x7</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-300">
+                FINANCIAL CYBER FRAUD EMERGENCY
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-900/80 text-rose-200 border border-rose-700/60 font-mono">
+                India 24x7
+              </span>
             </div>
-            <p className="text-xs text-slate-300">
-              If you have lost money within the last few hours, immediately dial <strong className="text-rose-300 font-bold text-sm">1930</strong> (Citizen Financial Cyber Fraud Reporting System) and contact your bank to freeze transactions.
+            <p className="text-xs text-slate-300 leading-relaxed">
+              If money has been lost due to financial cyber fraud, contact <strong>1930</strong> immediately and contact your bank/payment provider.
             </p>
           </div>
         </div>
-        <a 
-          href={`tel:${FINANCIAL_FRAUD_HELPLINE}`}
-          className="self-start sm:self-center px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-1.5 shrink-0 transition-all shadow-[0_0_12px_rgba(244,63,94,0.3)]"
-        >
-          <PhoneCall className="w-3.5 h-3.5" />
-          <span>Call 1930</span>
-        </a>
+
+        <div className="flex items-center space-x-2.5 shrink-0 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={handleCall1930}
+            className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-1.5 transition-all shadow-[0_0_12px_rgba(244,63,94,0.35)]"
+          >
+            <PhoneCall className="w-3.5 h-3.5" />
+            <span>Call 1930</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenPortal}
+            className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors"
+          >
+            <span>Report Online</span>
+            <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+          </button>
+        </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* 1930 DESKTOP MODAL / DIALOG (Section 1)                  */}
+      {/* ======================================================== */}
+      {showHelplineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+            <button
+              onClick={() => setShowHelplineModal(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Close dialog"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <PhoneCall className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  Financial Cyber Fraud?
+                </h3>
+                <p className="text-sm font-semibold text-rose-400">
+                  Call 1930 immediately.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              1930 is the National Cyber Crime Helpline for reporting financial cyber fraud. Reporting within the golden hour helps law enforcement freeze fraudulent bank transactions.
+            </p>
+
+            {copiedHelpline && (
+              <div className="p-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center space-x-1.5">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span>Helpline number 1930 copied to clipboard!</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                onClick={() => { window.location.href = `tel:${FINANCIAL_FRAUD_HELPLINE}`; }}
+                className="py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all shadow"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Call 1930</span>
+              </button>
+
+              <button
+                onClick={handleCopy1930}
+                className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center space-x-1.5 border border-slate-700 transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Copy 1930</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowHelplineModal(false);
+                  handleOpenPortal();
+                }}
+                className="py-2.5 px-3 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-800 font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Report Online</span>
+              </button>
+
+              <button
+                onClick={() => setShowHelplineModal(false)}
+                className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-medium text-xs transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stepper Wizard Navigation */}
       <div className="grid grid-cols-4 gap-2 border-b border-slate-800 pb-3">
@@ -254,7 +441,9 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         ))}
       </div>
 
-      {/* STEP 1: CHOOSE INCIDENT TYPE */}
+      {/* ======================================================== */}
+      {/* STEP 1: CHOOSE INCIDENT TYPE                             */}
+      {/* ======================================================== */}
       {step === 1 && (
         <div className="space-y-6">
           <div className="space-y-1">
@@ -306,17 +495,19 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         </div>
       )}
 
-      {/* STEP 2: COLLECT INCIDENT DETAILS */}
+      {/* ======================================================== */}
+      {/* STEP 2: INCIDENT DETAILS                                 */}
+      {/* ======================================================== */}
       {step === 2 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h2 className="text-lg font-bold text-white">Step 2: Collect Incident Details</h2>
               <p className="text-xs text-slate-400">
-                Provide clear, factual statements. Only include verified information. Do not enter passwords or live OTPs.
+                Provide clear, factual statements. Only include verified information. Do not enter passwords, live OTPs, or PINs.
               </p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-300 font-medium">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-300 font-medium truncate max-w-xs">
               Category: {category}
             </span>
           </div>
@@ -389,7 +580,10 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
                 rows={5}
                 placeholder="State the facts clearly: What message was received? What action was demanded? What links were clicked? Mention exact dates, times, and amounts if any..."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (validationError) setValidationError(null);
+                }}
                 className="w-full p-3.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs leading-relaxed placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
               />
               <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
@@ -413,7 +607,7 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
                 <div className="flex items-center space-x-2 bg-slate-900 p-1 rounded-lg border border-slate-700">
                   <button
                     type="button"
-                    onClick={() => setMoneyLost(false)}
+                    onClick={() => { setMoneyLost(false); setValidationError(null); }}
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                       !moneyLost ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'
                     }`}
@@ -444,7 +638,10 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
                         type="number"
                         placeholder="e.g. 5000"
                         value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
+                        onChange={(e) => {
+                          setAmount(e.target.value);
+                          if (validationError) setValidationError(null);
+                        }}
                         className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-rose-400"
                       />
                     </div>
@@ -503,7 +700,7 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
               <span>Back to Category</span>
             </button>
             <button
-              onClick={() => setStep(3)}
+              onClick={handleProceedToEvidence}
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-bold text-sm flex items-center space-x-2 shadow-lg transition-all"
             >
               <span>Continue to Evidence Checklist</span>
@@ -513,7 +710,9 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         </div>
       )}
 
-      {/* STEP 3: EVIDENCE CHECKLIST */}
+      {/* ======================================================== */}
+      {/* STEP 3: EVIDENCE CHECKLIST                               */}
+      {/* ======================================================== */}
       {step === 3 && (
         <div className="space-y-6">
           <div className="space-y-1">
@@ -522,6 +721,13 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
               Law enforcement and cybercrime investigators require verifiable digital artifacts. Check all items that you currently possess and preserve.
             </p>
           </div>
+
+          {validationError && (
+            <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-300 text-xs flex items-center space-x-2.5">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{validationError}</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Interactive Checklist */}
@@ -594,7 +800,7 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
               <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-start space-x-2">
                 <Lock className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Privacy Pledge:</strong> SafeSpeak AI runs documentation locally. Your complaint text and evidence lists are not uploaded or stored in external databases.
+                  <strong>Privacy Note:</strong> SafeSpeak processes incident documentation locally where possible. Review information before exporting or sharing it.
                 </span>
               </div>
             </div>
@@ -608,20 +814,30 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Details</span>
             </button>
+
             <button
               onClick={handleGenerateDraft}
               disabled={isGenerating}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-bold text-sm flex items-center space-x-2 shadow-lg transition-all disabled:opacity-50"
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm flex items-center space-x-2 shadow-lg transition-all ${
+                generateSuccess
+                  ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                  : 'bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950'
+              } disabled:opacity-60`}
             >
               {isGenerating ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Synthesizing Legal Draft...</span>
+                  <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                  <span>Generating Draft...</span>
+                </>
+              ) : generateSuccess ? (
+                <>
+                  <Check className="w-4 h-4 text-slate-950" />
+                  <span>Complaint Draft Ready ✓</span>
                 </>
               ) : (
                 <>
                   <span>Generate Formal Complaint Draft</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
                 </>
               )}
             </button>
@@ -629,28 +845,42 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
         </div>
       )}
 
-      {/* STEP 4: DRAFT, PREVIEW, EDIT & EXPORT */}
-      {step === 4 && draftResult && (
+      {/* ======================================================== */}
+      {/* STEP 4: DRAFT RESULT & EXPORT (Section 3)                */}
+      {/* ======================================================== */}
+      {step === 4 && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">
-                  Ready for Submission
-                </span>
-                <span className="text-xs text-slate-400">Step 4 of 4</span>
-              </div>
-              <h2 className="text-xl font-bold text-white mt-1">Review, Edit &amp; Export Complaint Draft</h2>
+          {/* Important Submission Advisory Banner */}
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start space-x-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-bold">
+                SafeSpeak AI prepares this draft for your review. It does not submit complaints to law enforcement.
+              </p>
+              <p className="text-slate-300 text-[11px]">
+                Copy or download this text, then paste it directly into the official portal (<a href={OFFICIAL_PORTAL_URL} target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">cybercrime.gov.in</a>).
+              </p>
+            </div>
+          </div>
+
+          {/* Action Bar with Requested Working Buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl">
+            <div className="flex items-center space-x-2">
+              <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-700/60">
+                Draft Ready
+              </span>
+              <span className="text-xs text-slate-400 font-mono">
+                {editableDraft.length} chars
+              </span>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleCopyDraft}
-                className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors"
+                className="px-3.5 py-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
               >
                 {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-cyan-400" />}
-                <span>{copied ? 'Copied to Clipboard!' : 'Copy Text'}</span>
+                <span>{copied ? 'Complaint draft copied!' : 'Copy Draft'}</span>
               </button>
 
               <button
@@ -658,87 +888,161 @@ export default function ReportCybercrimePage({ initialScanResult = null, setCurr
                 className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors"
               >
                 <Download className="w-4 h-4 text-sky-400" />
-                <span>Save .TXT</span>
+                <span>Download TXT</span>
               </button>
 
               <button
-                onClick={handlePrint}
-                className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors"
+                onClick={handleOpenPortal}
+                className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-1.5 transition-colors shadow"
               >
-                <Printer className="w-4 h-4 text-slate-300" />
-                <span>Print / PDF</span>
+                <span>Open Cyber Crime Portal</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={handleEditDetails}
+                className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 border border-slate-700 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Edit Details</span>
               </button>
             </div>
           </div>
 
-          {/* Submission Guidance Box */}
-          <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/40 text-xs text-cyan-100/90 space-y-2">
-            <div className="flex items-center space-x-2 text-cyan-300 font-bold">
-              <HelpCircle className="w-4 h-4" />
-              <span>Next Steps: How to Submit to the National Cyber Crime Portal</span>
-            </div>
-            <ol className="list-decimal list-inside space-y-1 text-slate-300">
-              <li>Review the generated draft below. You can edit any section directly inside the text box.</li>
-              <li>Click <strong>Copy Text</strong> to copy your formatted complaint.</li>
-              <li>Click the button below to open the official Government portal: <strong className="text-cyan-300">cybercrime.gov.in</strong>.</li>
-              <li>On the portal, select <strong>&ldquo;Report Cyber Crime&rdquo;</strong>, register/login with your mobile, and paste this draft into the incident narrative box.</li>
-            </ol>
-          </div>
-
-          {/* Editable Draft Textarea */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span className="font-semibold">Editable Complaint Draft (Click inside to modify text):</span>
-              <span>{editableDraft.length} characters</span>
-            </div>
-            <textarea
-              rows={18}
-              value={editableDraft}
-              onChange={(e) => setEditableDraft(e.target.value)}
-              className="w-full p-4 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 font-mono text-xs leading-relaxed focus:outline-none focus:border-cyan-400 transition-colors shadow-inner"
-            />
-          </div>
-
-          {/* Proceed to Official Reporting Portal Call-to-Action */}
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/50 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
+          {/* Structured Formal Cybercrime Complaint Draft View */}
+          <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div className="border-b border-slate-800 pb-4">
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-bold text-white">Continue to Official Submission</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 font-mono">Government of India</span>
+                <span className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-800">
+                  Official Standardized Format
+                </span>
               </div>
-              <p className="text-xs text-slate-400 max-w-xl">
-                Open the official Indian National Cyber Crime Reporting Portal. SafeSpeak AI helps document your complaint; actual legal submission occurs directly on the government portal.
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-2">
+                FORMAL CYBERCRIME COMPLAINT DRAFT
+              </h2>
+            </div>
+
+            {/* Field Breakdown Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Incident Type
+                </span>
+                <p className="text-white font-bold text-sm">
+                  {category}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Incident Date / Time
+                </span>
+                <p className="text-white font-mono text-sm">
+                  {incidentDate.replace('T', ' ')}
+                </p>
+              </div>
+            </div>
+
+            {/* Incident Description */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Incident Description (Chronological Statement)
+              </span>
+              <p className="text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
+                {description}
               </p>
             </div>
 
-            <a
-              href={OFFICIAL_PORTAL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 text-slate-950 font-extrabold text-sm flex items-center justify-center space-x-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all shrink-0 transform hover:-translate-y-0.5"
-            >
-              <span>Open cybercrime.gov.in</span>
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
+            {/* Suspicious Indicators */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Suspicious Indicators
+              </span>
+              {detectedSignalsList.length > 0 ? (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {detectedSignalsList.map((sig, idx) => (
+                    <span 
+                      key={idx}
+                      className="px-2.5 py-1 rounded-lg bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center space-x-1"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-rose-400" />
+                      <span>{sig.title || sig.signal_id}</span>
+                      {sig.score_contribution && (
+                        <span className="text-[10px] text-rose-400 font-mono">+{sig.score_contribution}</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  Category: {category} &bull; Communication channel: {platform} {suspectIdentifier ? `&bull; Identifier: ${suspectIdentifier}` : ''}
+                </p>
+              )}
+            </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setStep(2)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Modify Incident Form</span>
-            </button>
-            <button
-              onClick={() => {
-                setStep(1);
-                setDraftResult(null);
-              }}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-semibold transition-colors"
-            >
-              Start New Report
-            </button>
+            {/* Evidence Available */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Evidence Available &amp; Preserved
+              </span>
+              <ul className="space-y-1.5 text-xs text-slate-300">
+                {evidenceItems.map((item, idx) => (
+                  <li key={idx} className="flex items-center space-x-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Additional Information */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Additional Information
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-300">
+                <div>
+                  <span className="text-slate-500">Platform:</span> <strong className="text-white">{platform}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Suspect Identifier:</span> <strong className="text-white font-mono">{suspectIdentifier || "Under Investigation"}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Financial Loss:</span> <strong className={moneyLost ? "text-rose-400 font-bold" : "text-slate-300"}>
+                    {moneyLost ? `${currency} ${amount} (Ref: ${transactionRef || 'N/A'})` : 'No direct monetary loss reported'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Bank Contacted:</span> <strong className="text-white">{bankContacted ? 'Yes - Bank alerted' : 'No / N/A'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Requested Action */}
+            <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/30 space-y-1.5">
+              <span className="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider">
+                Requested Action
+              </span>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Factual request for law enforcement review, investigation, and digital infrastructure trace under the Information Technology Act &amp; applicable criminal provisions{moneyLost ? `, and immediate fund freeze assistance via the National Cyber Crime Portal (1930)` : ''}.
+              </p>
+            </div>
+
+            {/* Editable Full Draft Textarea */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold text-slate-300">
+                  Full Formatted Text (Ready to Copy/Download):
+                </span>
+                <span>{editableDraft.length} characters</span>
+              </div>
+              <textarea
+                rows={14}
+                value={editableDraft}
+                onChange={(e) => setEditableDraft(e.target.value)}
+                className="w-full p-4 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 font-mono text-xs leading-relaxed focus:outline-none focus:border-cyan-400 transition-colors shadow-inner"
+              />
+            </div>
           </div>
         </div>
       )}
