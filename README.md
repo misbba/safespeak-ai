@@ -433,7 +433,7 @@ SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 
 ---
 
-## 16. Future Improvements
+## 15. Future Improvements
 1. **Browser Extension:** Direct inline evaluation of links and webmail messages prior to navigation.
 2. **Multi-lingual Translation:** Automatic language detection for regional scam lures (Hindi, Spanish, French, etc.).
 3. **Automated Incident Forwarding:** Secure API integration to dispatch generated reports directly to National Cybercrime portals.
@@ -441,7 +441,7 @@ SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 
 ---
 
-## 17. Responsible AI & Limitations
+## 16. Responsible AI & Limitations
 
 ### Advisory Nature of Risk Scores
 Risk scores are AI-assisted evaluations based on structural patterns and linguistic indicators. They must **never** be treated as mathematical or legal proof of fraud.
@@ -455,7 +455,7 @@ SafeSpeak AI **does not store** passwords, banking PINs, One-Time Passwords (OTP
 
 ---
 
-## 18. License
+## 17. License
 This project is licensed under the [MIT License](LICENSE).
 
 ---
