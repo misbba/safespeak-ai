@@ -361,7 +361,7 @@ If you prefer setting up the services manually via the Render Dashboard:
    | :--- | :--- | :--- |
    | `PORT` | `5000` | Port Gunicorn listens on |
    | `SECRET_KEY` | *(Click "Generate" or enter random string)* | Cryptographic security |
-   | `FRONTEND_URL` | `https://safespeak-frontend.onrender.com` | Production CORS origin |
+   | `FRONTEND_URL` | `https://safespeak-frontend-m81s.onrender.com` | Production CORS origin |
    | `AI_API_KEY` | *(Optional)* | Gemini / OpenAI API key |
    | `AI_PROVIDER` | `auto` | Auto-detects AI provider |
    | `AI_MODEL` | `gemini-2.5-flash` | LLM model name |
@@ -378,7 +378,7 @@ If you prefer setting up the services manually via the Render Dashboard:
 4. Add the **Environment Variable**:
    | Variable | Value |
    | :--- | :--- |
-   | `VITE_API_BASE_URL` | `https://safespeak-backend.onrender.com` |
+   | `VITE_API_BASE_URL` | `https://safespeak-backend-ikal.onrender.com` |
 5. In **Redirects / Rewrites**:
    - Add a Rewrite rule:
      - **Type:** `Rewrite`
