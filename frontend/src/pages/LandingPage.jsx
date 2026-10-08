@@ -104,7 +104,7 @@ export default function LandingPage({ setCurrentRoute, onLaunchDemo }) {
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               {/* Product Badge */}
               <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/80 text-cyan-300 text-xs font-semibold shadow-inner">
-                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                <img src="/assets/safespeak-logo.png" alt="SafeSpeak AI" className="w-4 h-4 object-contain rounded" />
                 <span>SafeSpeak AI &bull; Digital Safety Assistant</span>
               </div>
 

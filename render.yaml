@@ -1,0 +1,54 @@
+# ============================================================
+# Render Blueprint — SafeSpeak AI
+# Deploys Backend (Docker Web Service) & Frontend (Static Site)
+# ============================================================
+
+services:
+  # ----------------------------------------------------------
+  # 1. Flask Backend Service (Docker container with Tesseract)
+  # ----------------------------------------------------------
+  - type: web
+    name: safespeak-backend
+    env: docker
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+        # Example: https://safespeak-frontend.onrender.com
+      - key: AI_API_KEY
+        sync: false
+        # Optional: Add Gemini / OpenAI API key for enhanced reasoning
+      - key: AI_PROVIDER
+        value: auto
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: MAX_CONTENT_LENGTH
+        value: 10485760
+
+  # ----------------------------------------------------------
+  # 2. React + Vite Frontend (Static Site)
+  # ----------------------------------------------------------
+  - type: web
+    name: safespeak-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+        # Set to backend URL: https://safespeak-backend.onrender.com
+    routes:
+      # SPA rewrite rule to handle React Router client-side paths
+      - type: rewrite
+        source: /*
+        destination: /index.html

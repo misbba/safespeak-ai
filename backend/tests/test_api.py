@@ -399,3 +399,100 @@ def test_complaint_official_portal_link_validity(client):
     assert data["official_portal_url"] == "https://cybercrime.gov.in/"
     assert data["helpline"] == "1930"
 
+# ============================================================================
+# Screenshot Scanner & OCR Real Image Tests
+# ============================================================================
+
+def _generate_synthetic_image(text_lines):
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    try:
+        font = ImageFont.truetype('arial.ttf', 24)
+    except Exception:
+        font = ImageFont.load_default(size=20)
+
+    img = Image.new('RGB', (800, 60 + len(text_lines) * 50), color='white')
+    d = ImageDraw.Draw(img)
+    y = 25
+    for line in text_lines:
+        d.text((30, y), line, fill='black', font=font)
+        y += 50
+
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return buf
+
+def test_screenshot_extract_unique_image_a(client):
+    lines = [
+        "TEST SCREENSHOT 84721",
+        "Congratulations! You have been selected for a remote job.",
+        "Pay Rs 999 registration fee today to activate your offer.",
+        "Contact test-scam-84721@example.com."
+    ]
+    img_buf = _generate_synthetic_image(lines)
+    data = {"image": (img_buf, "screenshot_a.png", "image/png")}
+    res = client.post("/api/analyze/screenshot/extract", data=data, content_type="multipart/form-data")
+    assert res.status_code == 200
+    result = res.get_json()
+    extracted = result.get("extracted_text", "")
+    assert "84721" in extracted
+    assert "999" in extracted
+    assert "registration fee" in extracted
+
+def test_screenshot_extract_unique_image_b(client):
+    lines = [
+        "Your package delivery is scheduled for tomorrow.",
+        "Track your package using the official delivery app."
+    ]
+    img_buf = _generate_synthetic_image(lines)
+    data = {"image": (img_buf, "screenshot_b.png", "image/png")}
+    res = client.post("/api/analyze/screenshot/extract", data=data, content_type="multipart/form-data")
+    assert res.status_code == 200
+    result = res.get_json()
+    extracted = result.get("extracted_text", "")
+    assert "package delivery" in extracted
+    assert "official delivery app" in extracted
+    # Ensure Screenshot A text does NOT appear
+    assert "84721" not in extracted
+    assert "999" not in extracted
+
+def test_screenshot_extract_blank_image(client):
+    import io
+    from PIL import Image
+    blank_img = Image.new('RGB', (400, 200), color='white')
+    buf = io.BytesIO()
+    blank_img.save(buf, format='PNG')
+    buf.seek(0)
+
+    data = {"image": (buf, "blank.png", "image/png")}
+    res = client.post("/api/analyze/screenshot/extract", data=data, content_type="multipart/form-data")
+    assert res.status_code == 200
+    result = res.get_json()
+    assert result.get("extracted_text") == ""
+    assert "No readable text was detected" in result.get("message", "")
+
+def test_screenshot_analyze_multipart_image_a(client):
+    lines = [
+        "TEST SCREENSHOT 84721",
+        "Congratulations! You have been selected for a remote job.",
+        "Pay Rs 999 registration fee today to activate your offer.",
+        "Contact test-scam-84721@example.com."
+    ]
+    img_buf = _generate_synthetic_image(lines)
+    data = {"image": (img_buf, "screenshot_a.png", "image/png")}
+    res = client.post("/api/analyze/screenshot", data=data, content_type="multipart/form-data")
+    assert res.status_code == 200
+    analysis = res.get_json()
+    assert analysis["risk_level"] == "HIGH"
+    assert analysis["risk_score"] >= 80
+    assert "84721" in analysis["extracted_text"]
+    signals = [s["signal_id"] for s in analysis.get("warning_signals", [])]
+    assert "PAYMENT_REQUEST" in signals or "JOB_OR_INTERNSHIP_FEE" in signals
+
+def test_screenshot_analyze_missing_image(client):
+    res = client.post("/api/analyze/screenshot", data={}, content_type="multipart/form-data")
+    assert res.status_code == 400
+    assert "Please upload a screenshot image." in res.get_json()["error"]
+
+

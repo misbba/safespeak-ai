@@ -1,11 +1,17 @@
 import { generateLocalDraft, COMPLAINT_CATEGORIES, OFFICIAL_PORTAL_URL, FINANCIAL_FRAUD_HELPLINE } from './complaintGenerator';
 
-const API_BASE = '/api';
+let envApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+if (envApiUrl && !envApiUrl.startsWith('http://') && !envApiUrl.startsWith('https://') && !envApiUrl.startsWith('/')) {
+  envApiUrl = `https://${envApiUrl}`;
+}
+const API_BASE = envApiUrl 
+  ? (envApiUrl.endsWith('/api') ? envApiUrl : `${envApiUrl.replace(/\/+$/, '')}/api`)
+  : '/api';
 
 function formatApiError(status, errObj) {
   if (errObj && errObj.error) return errObj.error;
   if (status === 502 || status === 503) {
-    return 'Cannot connect to SafeSpeak AI Backend on port 5000. Please ensure "Backend (Flask)" or "SafeSpeak AI (Full Stack)" is running in IntelliJ IDEA.';
+    return 'Cannot connect to SafeSpeak AI Backend. Please ensure the backend service is running.';
   }
   return `Server responded with ${status}`;
 }
@@ -140,7 +146,7 @@ export const api = {
       if (networkErr.message && !networkErr.message.includes('Server responded')) {
         throw networkErr;
       }
-      throw new Error('Cannot connect to SafeSpeak AI Backend on port 5000. Please ensure "Backend (Flask)" is running in IntelliJ IDEA.');
+      throw new Error('Cannot connect to SafeSpeak AI Backend. Please ensure the backend service is running.');
     }
   },
 
@@ -161,13 +167,14 @@ export const api = {
       if (networkErr.message && !networkErr.message.includes('Server responded')) {
         throw networkErr;
       }
-      throw new Error('Cannot connect to SafeSpeak AI Backend on port 5000. Please ensure "Backend (Flask)" is running in IntelliJ IDEA.');
+      throw new Error('Cannot connect to SafeSpeak AI Backend. Please ensure the backend service is running.');
     }
   },
 
   // OCR Screenshot Text Extraction
   async extractScreenshotText(file, presetHint = null) {
     const formData = new FormData();
+    formData.append('image', file);
     formData.append('file', file);
     if (presetHint) formData.append('preset_hint', presetHint);
 
@@ -182,16 +189,26 @@ export const api = {
     return await res.json();
   },
 
-  // Analyze Extracted Screenshot Text
-  async analyzeScreenshot(data) {
-    const res = await fetch(`${API_BASE}/analyze/screenshot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+  // Analyze Screenshot (supports FormData with actual image file or JSON with reviewed text)
+  async analyzeScreenshot(payload) {
+    let options;
+    if (payload instanceof FormData) {
+      options = {
+        method: 'POST',
+        body: payload
+      };
+    } else {
+      options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      };
+    }
+
+    const res = await fetch(`${API_BASE}/analyze/screenshot`, options);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Analysis failed (${res.status})`);
+      throw new Error(err.error || `Screenshot analysis failed (${res.status})`);
     }
     return await res.json();
   },

@@ -66,6 +66,36 @@ export default function ScanResultView({ result, onReset, onReportComplaint }) {
         </div>
       </div>
 
+      {/* OCR Extracted Text Display (Requirement 7) */}
+      {result.content_type === 'screenshot' && result.extracted_text && (
+        <div className="p-5 rounded-2xl bg-slate-900/90 border border-indigo-500/30 shadow-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-indigo-400">
+              <FileText className="w-4 h-4" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                TEXT DETECTED IN SCREENSHOT
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300">
+              OCR Extracted
+            </span>
+          </div>
+          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed select-text">
+            {result.extracted_text}
+          </div>
+        </div>
+      )}
+
+      {/* Section Divider: SAFESPEAK ANALYSIS */}
+      {result.content_type === 'screenshot' && (
+        <div className="flex items-center space-x-2 pt-2">
+          <img src="/assets/safespeak-logo.png" alt="SafeSpeak AI" className="w-4 h-4 object-contain rounded" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            SAFESPEAK ANALYSIS
+          </h3>
+        </div>
+      )}
+
       {/* 1. Main Risk Assessment Gauge Card with Confidence */}
       <RiskGauge
         score={result.risk_score}

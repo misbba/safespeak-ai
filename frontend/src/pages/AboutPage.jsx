@@ -10,7 +10,7 @@ export default function AboutPage({ setCurrentRoute }) {
       {/* Top Banner */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800 text-cyan-300 text-xs font-semibold">
-          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+          <img src="/assets/safespeak-logo.png" alt="SafeSpeak AI" className="w-4 h-4 object-contain rounded" />
           <span>System Philosophy &amp; Architecture</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">

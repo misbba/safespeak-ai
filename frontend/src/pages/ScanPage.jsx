@@ -97,47 +97,71 @@ export default function ScanPage({
     }
   };
 
-  // 2. OCR Extract Screenshot
+  // 2. OCR Extract Screenshot from Real Image
   const handleImageFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg("Please select a valid image file (PNG, JPG, JPEG, WEBP).");
+    // Reset file input so selecting the same file triggers change
+    if (e.target) e.target.value = '';
+
+    // Clear previous results, errors, and OCR text (Requirement 6)
+    setScanResult(null);
+    setExtractedText('');
+    setOcrMetadata(null);
+    setErrorMsg(null);
+    setOcrUnavailable(false);
+
+    // Validate format (Requirement 12)
+    const validExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
+    const lowerName = file.name.toLowerCase();
+    const hasValidExt = validExtensions.some(ext => lowerName.endsWith(ext));
+    if (!hasValidExt && !file.type.startsWith('image/')) {
+      setSelectedImageFile(null);
+      setImagePreviewUrl(null);
+      setErrorMsg("Please upload PNG, JPG, or JPEG.");
       return;
     }
 
+    // Set real File object and generate actual preview from File (Requirement 10)
     setSelectedImageFile(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
-    setErrorMsg(null);
-    setOcrUnavailable(false);
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreviewUrl(objectUrl);
     setIsExtractingOcr(true);
 
     try {
+      // Send actual image file via FormData to backend OCR
       const data = await api.extractScreenshotText(file);
-      setExtractedText(data.extracted_text || '');
       setOcrMetadata(data);
-      if (!data.extracted_text || data.extracted_text.trim() === '') {
+      if (data.extracted_text && data.extracted_text.trim() !== '') {
+        setExtractedText(data.extracted_text);
+        setOcrUnavailable(false);
+      } else {
+        setExtractedText('');
         setOcrUnavailable(true);
+        setErrorMsg("SafeSpeak could not read text from this screenshot. Try a clearer screenshot with readable text.");
       }
     } catch (err) {
-      console.warn("OCR service unavailable, allowing manual paste:", err);
+      console.warn("OCR service error:", err);
       setOcrUnavailable(true);
-      setExtractedText("");
+      setExtractedText('');
+      setErrorMsg("SafeSpeak could not read text from this screenshot. Try a clearer screenshot with readable text.");
     } finally {
       setIsExtractingOcr(false);
     }
   };
 
-  // Pre-load demo screenshot simulation
+  // Pre-load demo screenshot simulation (Only used when explicitly clicked)
   const handleLoadDemoScreenshot = async (presetType) => {
+    // Clear previous scan result & errors (Requirement 6)
+    setScanResult(null);
     setErrorMsg(null);
     setIsExtractingOcr(true);
     setOcrUnavailable(false);
-    setSelectedImageFile({ name: `${presetType}_screenshot.png` });
     setImagePreviewUrl(null);
+    setSelectedImageFile({ name: `${presetType}_sample.png`, is_demo_preset: true });
 
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 300));
 
     if (presetType === 'internship') {
       setExtractedText(
@@ -147,9 +171,9 @@ export default function ScanPage({
       );
       setOcrMetadata({
         method: "demo_preset",
-        filename: "whatsapp_internship_offer.png",
+        filename: "internship_sample.png",
         dimensions: "1080x2400 (Mobile Screenshot)",
-        notes: "Matched mobile chat screenshot pattern. Ready for user verification."
+        notes: "Demo preset loaded for testing."
       });
     } else if (presetType === 'bank') {
       setExtractedText(
@@ -159,41 +183,60 @@ export default function ScanPage({
       );
       setOcrMetadata({
         method: "demo_preset",
-        filename: "sms_bank_kyc_alert.png",
+        filename: "bank_kyc_sample.png",
         dimensions: "1080x1920 (SMS Screenshot)",
-        notes: "Matched mobile SMS notification pattern."
+        notes: "Demo preset loaded for testing."
       });
     }
     setIsExtractingOcr(false);
   };
 
-  // Analyze Screenshot Extracted Text
-  const handleAnalyzeScreenshotText = async () => {
-    if (!extractedText.trim()) {
-      setErrorMsg("No text available to analyze. Please upload an image or enter text below.");
+  // Analyze Screenshot (Sends actual uploaded file or reviewed text via FormData)
+  const handleAnalyzeScreenshot = async () => {
+    if (!selectedImageFile) {
+      setErrorMsg("Please upload a screenshot image.");
       return;
     }
+
+    if (!extractedText.trim()) {
+      setErrorMsg("SafeSpeak could not read text from this screenshot. Try a clearer screenshot with readable text.");
+      return;
+    }
+
     setErrorMsg(null);
     setIsAnalyzing(true);
 
     try {
       await runProgressSteps([
-        "Verifying OCR text integrity...",
-        "Detecting visual impersonation & brand spoofing...",
-        "Identifying psychological coercion & urgency lures...",
+        "Inspecting uploaded screenshot image...",
+        "Validating OCR text integrity...",
+        "Detecting visual impersonation & coercion markers...",
         "Synthesizing 4-stage Risk Story...",
         "Calibrating threat level and safety guidance..."
       ]);
 
-      const result = await api.analyzeScreenshot({
-        extracted_text: extractedText,
-        filename: selectedImageFile?.name || "screenshot.png",
-        is_demo: isDemoMode
-      });
+      let result;
+      // If a real File object was uploaded, send FormData with the actual image
+      if (selectedImageFile instanceof File) {
+        const formData = new FormData();
+        formData.append('image', selectedImageFile);
+        formData.append('file', selectedImageFile);
+        formData.append('extracted_text', extractedText);
+        formData.append('is_demo', 'false'); // Always real analysis for uploaded files
+        result = await api.analyzeScreenshot(formData);
+      } else {
+        // Explicit demo sample
+        result = await api.analyzeScreenshot({
+          extracted_text: extractedText,
+          filename: selectedImageFile?.name || "screenshot.png",
+          is_demo: true
+        });
+      }
+
       setScanResult(result);
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || "Failed to analyze screenshot text.");
+      setErrorMsg(err.message || "Screenshot analysis failed. Please try again.");
     } finally {
       setIsAnalyzing(false);
       setAnalysisStep('');
@@ -239,8 +282,8 @@ export default function ScanPage({
       {/* Header Bar with Mode Info & Secondary Links */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-            <ShieldAlert className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-950 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.25)] flex items-center justify-center shrink-0">
+            <img src="/assets/safespeak-logo.png" alt="SafeSpeak AI" className="w-full h-full object-contain p-0.5" />
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
@@ -582,21 +625,24 @@ export default function ScanPage({
                   </button>
                 </div>
 
-                {/* Image Preview & OCR Extract Status */}
+                {/* Image Preview Card (Requirement 10) */}
                 {imagePreviewUrl && (
-                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center space-x-3">
-                    <img
-                      src={imagePreviewUrl}
-                      alt="Uploaded Screenshot"
-                      className="w-14 h-14 object-cover rounded-lg border border-slate-700"
-                    />
-                    <div className="flex-1 overflow-hidden">
-                      <p className="text-xs font-mono text-slate-200 truncate font-semibold">
+                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Uploaded Screenshot</span>
+                      </span>
+                      <span className="font-mono text-slate-400 text-[11px] truncate max-w-xs">
                         {selectedImageFile?.name}
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        Image uploaded. Review extracted wording below.
-                      </p>
+                      </span>
+                    </div>
+                    <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-900/40 max-h-80 flex items-center justify-center p-3">
+                      <img
+                        src={imagePreviewUrl}
+                        alt="Uploaded Screenshot"
+                        className="max-h-72 max-w-full object-contain rounded-md shadow-md"
+                      />
                     </div>
                   </div>
                 )}
@@ -606,9 +652,9 @@ export default function ScanPage({
                   <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start space-x-2">
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold">Text extraction is unavailable.</p>
+                      <p className="font-semibold">SafeSpeak could not read text from this screenshot.</p>
                       <p className="text-slate-300 text-[11px] mt-0.5">
-                        You can manually paste the message text in the review box below to continue the SafeSpeak analysis.
+                        Try uploading a clearer screenshot with readable text, or manually type/paste the message text below.
                       </p>
                     </div>
                   </div>
@@ -632,25 +678,31 @@ export default function ScanPage({
                     rows={5}
                     value={extractedText}
                     onChange={(e) => setExtractedText(e.target.value)}
-                    placeholder="Extracted text will appear here. You can edit or paste text manually before scanning..."
+                    placeholder="Extracted text will appear here once an image is uploaded. You can review or edit before analyzing..."
                     className="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 font-mono transition-all resize-y"
                   />
                 </div>
 
+                {/* Analyze Screenshot Button */}
                 <button
-                  onClick={handleAnalyzeScreenshotText}
-                  disabled={isAnalyzing || isExtractingOcr}
-                  className="w-full sm:w-auto flex items-center justify-center space-x-2 px-8 py-3.5 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-indigo-400 via-sky-400 to-cyan-300 hover:from-indigo-300 hover:to-sky-300 shadow-[0_0_20px_rgba(99,102,241,0.35)] disabled:opacity-60 transition-all"
+                  onClick={handleAnalyzeScreenshot}
+                  disabled={isAnalyzing || isExtractingOcr || !selectedImageFile}
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 px-8 py-3.5 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-indigo-400 via-sky-400 to-cyan-300 hover:from-indigo-300 hover:to-sky-300 shadow-[0_0_20px_rgba(99,102,241,0.35)] disabled:opacity-50 transition-all"
                 >
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                      <span>{analysisStep || "Analyzing extracted text..."}</span>
+                      <span>{analysisStep || "Analyzing screenshot..."}</span>
+                    </>
+                  ) : isExtractingOcr ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>Extracting Text with OCR...</span>
                     </>
                   ) : (
                     <>
                       <Search className="w-4 h-4 text-slate-950" />
-                      <span>Analyze Extracted Text</span>
+                      <span>Analyze Screenshot</span>
                     </>
                   )}
                 </button>

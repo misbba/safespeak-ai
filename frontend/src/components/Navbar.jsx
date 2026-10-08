@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
-  ShieldAlert, Sparkles, BookOpen, Info, 
+  Sparkles, BookOpen, Info, 
   FileText, Menu, X, ArrowRight, ShieldCheck, Search
 } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setIsDemoMode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -47,29 +48,13 @@ export default function Navbar({ currentRoute, setCurrentRoute, isDemoMode, setI
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo & Tagline */}
-          <div 
+          <Logo
+            size="md"
+            showText={true}
+            showBadge={true}
+            showTagline={true}
             onClick={() => { setCurrentRoute('landing'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            className="flex items-center space-x-3 cursor-pointer group shrink-0"
-          >
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 via-sky-500/10 to-indigo-500/20 border border-cyan-500/30 group-hover:border-cyan-400/60 transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-              <ShieldAlert className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping opacity-75" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-slate-950" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-lg sm:text-xl font-bold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
-                  SafeSpeak <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-400">AI</span>
-                </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold tracking-wider text-cyan-300 bg-cyan-950/60 border border-cyan-800/60 rounded-full uppercase">
-                  Cyber Defense
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium tracking-wide hidden sm:block">
-                &ldquo;Think Before You Click.&rdquo;
-              </p>
-            </div>
-          </div>
+          />
 
           {/* Desktop Public Navigation Links (Section 7) */}
           <nav className="hidden md:flex items-center space-x-5 lg:space-x-6">

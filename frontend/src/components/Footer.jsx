@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Footer({ setCurrentRoute }) {
   const handleNavClick = (route, sectionId = null) => {
@@ -25,17 +25,12 @@ export default function Footer({ setCurrentRoute }) {
           
           {/* 1. LEFT BRAND SECTION (Slightly wider) */}
           <div className="col-span-1 md:col-span-1 lg:col-span-4 space-y-3.5 pr-0 lg:pr-6">
-            <div 
+            <Logo
+              size="sm"
+              showText={true}
+              showTagline={false}
               onClick={() => handleNavClick('landing')}
-              className="flex items-center space-x-2.5 cursor-pointer group w-fit"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 group-hover:border-cyan-400/60 transition-colors">
-                <ShieldAlert className="w-4 h-4 text-cyan-400" />
-              </div>
-              <span className="text-base font-bold text-white tracking-tight group-hover:text-cyan-300 transition-colors">
-                SafeSpeak <span className="text-cyan-400">AI</span>
-              </span>
-            </div>
+            />
 
             <p className="text-cyan-400/90 text-xs font-semibold tracking-wide">
               &ldquo;Think Before You Click.&rdquo;

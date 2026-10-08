@@ -146,7 +146,7 @@ export default function SafetyCenterPage({ setCurrentRoute }) {
       {/* Page Header */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800 text-cyan-300 text-xs font-semibold">
-          <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+          <img src="/assets/safespeak-logo.png" alt="SafeSpeak AI" className="w-4 h-4 object-contain rounded" />
           <span>Cybersecurity Knowledge Base</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">

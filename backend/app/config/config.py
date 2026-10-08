@@ -10,6 +10,7 @@ load_dotenv(BASE_DIR.parent / ".env")
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "safespeak-ai-dev-secret-key-2026")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "")
     
     # AI API configuration
     AI_API_KEY = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")

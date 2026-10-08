@@ -306,17 +306,109 @@ npm run dev
 
 ---
 
-## 12. Environment Variables
+## 12. Production Deployment Guide (GitHub + Render)
 
-SafeSpeak AI works immediately **without** setting any environment variables (using its built-in heuristic engine and demo mode). 
+SafeSpeak AI is engineered for separation of concerns and can be deployed with zero hassle to **Render** directly from your GitHub repository.
 
-To connect an external LLM, copy `.env.example` to `.env`:
+### Architecture
+
+```
+┌─────────────────────────────────┐           ┌─────────────────────────────────┐
+│     Render Static Site          │  HTTPS    │     Render Web Service          │
+│   (React 19 + Vite 8 SPA)       ├──────────►│ (Python 3.11 + Flask + Gunicorn)│
+│  https://safespeak.onrender.com │   /api/   │   + Tesseract OCR in Docker     │
+└─────────────────────────────────┘           └─────────────────────────────────┘
+```
+
+---
+
+### Option A: 1-Click Automated Blueprint (`render.yaml`)
+
+SafeSpeak AI includes a pre-configured `render.yaml` infrastructure-as-code blueprint:
+
+1. **Push your repository to GitHub**:
+   ```bash
+   git add .
+   git commit -m "chore: prepare for Render production deployment"
+   git push origin main
+   ```
+2. Log into the [Render Dashboard](https://dashboard.render.com).
+3. Click **New +** $\rightarrow$ **Blueprint**.
+4. Connect your GitHub repository. Render reads `render.yaml` and automatically configures:
+   - `safespeak-backend`: Web Service using Docker (`backend/Dockerfile`) with Tesseract OCR pre-installed and health check at `/api/health`.
+   - `safespeak-frontend`: Static Site built with `npm run build` from `frontend/dist` with SPA rewrite rules (`/*` $\rightarrow$ `/index.html`).
+5. Fill in the prompt values (or accept defaults):
+   - Set `VITE_API_BASE_URL` in the frontend static site to your backend URL (e.g., `https://safespeak-backend.onrender.com`).
+   - Set `FRONTEND_URL` in the backend service to your frontend static site URL (e.g., `https://safespeak-frontend.onrender.com`).
+6. Click **Apply**.
+
+---
+
+### Option B: Manual Setup on Render
+
+If you prefer setting up the services manually via the Render Dashboard:
+
+#### 1. Deploy the Backend Web Service
+1. In Render, click **New +** $\rightarrow$ **Web Service**.
+2. Select your repository.
+3. Configure the service settings:
+   - **Name:** `safespeak-backend`
+   - **Root Directory:** `backend`
+   - **Runtime:** `Docker` (Render automatically detects `backend/Dockerfile`)
+   - **Health Check Path:** `/api/health`
+4. Add the following **Environment Variables**:
+   | Variable | Value | Notes |
+   | :--- | :--- | :--- |
+   | `PORT` | `5000` | Port Gunicorn listens on |
+   | `SECRET_KEY` | *(Click "Generate" or enter random string)* | Cryptographic security |
+   | `FRONTEND_URL` | `https://safespeak-frontend.onrender.com` | Production CORS origin |
+   | `AI_API_KEY` | *(Optional)* | Gemini / OpenAI API key |
+   | `AI_PROVIDER` | `auto` | Auto-detects AI provider |
+   | `AI_MODEL` | `gemini-2.5-flash` | LLM model name |
+5. Click **Create Web Service**. Note the assigned URL (e.g., `https://safespeak-backend.onrender.com`).
+
+#### 2. Deploy the Frontend Static Site
+1. In Render, click **New +** $\rightarrow$ **Static Site**.
+2. Select your repository.
+3. Configure the static site settings:
+   - **Name:** `safespeak-frontend`
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm install && npm run build`
+   - **Publish Directory:** `dist`
+4. Add the **Environment Variable**:
+   | Variable | Value |
+   | :--- | :--- |
+   | `VITE_API_BASE_URL` | `https://safespeak-backend.onrender.com` |
+5. In **Redirects / Rewrites**:
+   - Add a Rewrite rule:
+     - **Type:** `Rewrite`
+     - **Source:** `/*`
+     - **Destination:** `/index.html`
+   *(This ensures client-side routing like `/features`, `/scan`, and `/report` works on direct page refreshes).*
+6. Click **Create Static Site**.
+
+---
+
+### Production Notes & Persistence
+
+- **OCR in Production:** Render Docker container installs `tesseract-ocr` and `tesseract-ocr-eng` system packages at build time, giving you real image text extraction without relying on platform-specific Windows APIs.
+- **SQLite Database Persistence:** By default on Render's free tier, the local filesystem is ephemeral and resets on restarts. For permanent scan history persistence across deploys on paid tiers, mount a Render Disk to `/app/data`.
+- **Health Check Endpoint:** The backend exposes `/api/health` which responds with `200 OK` and zero secret leakage.
+
+---
+
+## 13. Environment Variables
+
+SafeSpeak AI works out-of-the-box **without** mandatory environment variables (utilizing its built-in rule engine). 
+
+To customize or connect external LLM providers, copy `.env.example` to `.env`:
 
 ```env
 # Flask Backend Settings
 HOST=127.0.0.1
 PORT=5000
 SECRET_KEY=safespeak-ai-production-secret-key
+FRONTEND_URL=https://safespeak-frontend.onrender.com
 
 # Optional External AI API Key (Gemini or OpenAI)
 AI_API_KEY=your_gemini_or_openai_api_key_here
@@ -325,11 +417,14 @@ AI_MODEL=gemini-2.5-flash
 
 # Maximum Upload File Size (Bytes)
 MAX_CONTENT_LENGTH=10485760
+
+# Frontend API URL (Set on Render Frontend Static Site)
+VITE_API_BASE_URL=https://safespeak-backend.onrender.com
 ```
 
 ---
 
-## 12. Demo Mode
+## 14. Demo Mode
 SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 - Toggleable via the top navigation bar at any time.
 - Features 5 realistic test cases covering internship scams, banking KYC fraud, lottery scams, unauthorized logins, and benign meeting invites.
@@ -338,7 +433,7 @@ SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 
 ---
 
-## 13. Screenshots & Visual Interface
+## 15. Screenshots & Visual Interface
 
 ### 1. Landing Page & Visual Workflow
 *Hero banner with cybersecurity tagline ("Think Before You Click."), core 6-step analysis pipeline, and capability matrix.*
@@ -357,7 +452,7 @@ SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 
 ---
 
-## 14. Future Improvements
+## 16. Future Improvements
 1. **Browser Extension:** Direct inline evaluation of links and webmail messages prior to navigation.
 2. **Multi-lingual Translation:** Automatic language detection for regional scam lures (Hindi, Spanish, French, etc.).
 3. **Automated Incident Forwarding:** Secure API integration to dispatch generated reports directly to National Cybercrime portals.
@@ -365,7 +460,7 @@ SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 
 ---
 
-## 15. Responsible AI & Limitations
+## 17. Responsible AI & Limitations
 
 ### Advisory Nature of Risk Scores
 Risk scores are AI-assisted evaluations based on structural patterns and linguistic indicators. They must **never** be treated as mathematical or legal proof of fraud.
@@ -379,7 +474,7 @@ SafeSpeak AI **does not store** passwords, banking PINs, One-Time Passwords (OTP
 
 ---
 
-## 16. License
+## 18. License
 This project is licensed under the [MIT License](LICENSE).
 
 ---
