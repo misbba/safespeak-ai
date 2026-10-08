@@ -433,25 +433,6 @@ SafeSpeak AI features a dedicated, transparent **Demo Mode**:
 
 ---
 
-## 15. Screenshots & Visual Interface
-
-### 1. Landing Page & Visual Workflow
-*Hero banner with cybersecurity tagline ("Think Before You Click."), core 6-step analysis pipeline, and capability matrix.*
-
-### 2. Security Overview Dashboard
-*Real-time metrics (Total Scans, High Risk, Medium Risk, Low Risk), threat severity distribution bar, scans by surface, and recent analyses table.*
-
-### 3. Scanner Hub (Message, Screenshot OCR & URL Checker)
-*Tabbed scanner interface with character counters, preset sample buttons, screenshot drag-and-drop, and editable OCR review area.*
-
-### 4. Signature Risk Story & Warning Signals Result
-*Interactive radial threat gauge, detected red flag signals with quoted excerpts, 4-stage persuasion pipeline (Trigger $\rightarrow$ Pressure $\rightarrow$ Request $\rightarrow$ Potential Risk), Explain Simply card, and actionable safety checklist.*
-
-### 5. Educational Safety Center & Interactive Quiz
-*8 modular consumer protection guides, interactive "Spot the Red Flag" mini-quiz, and emergency helpline directory.*
-
----
-
 ## 16. Future Improvements
 1. **Browser Extension:** Direct inline evaluation of links and webmail messages prior to navigation.
 2. **Multi-lingual Translation:** Automatic language detection for regional scam lures (Hindi, Spanish, French, etc.).
@@ -480,3 +461,9 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 *Built with ❤️ for the Digital Safety & Cybersecurity Hackathon.*
+
+---
+
+## Live Demo
+
+[Live Demo](https://safespeak-frontend-m81s.onrender.com)
